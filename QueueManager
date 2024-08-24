@@ -1,0 +1,115 @@
+from collections import deque
+from Customer import Customer
+
+
+class QueueManager:
+    def __init__(self):
+        self.waiting_queue = deque()
+        self.undo_stack = []
+        self.redo_stack = []
+
+    def add_customer(self, customer):
+        if customer.vip:
+            self.waiting_queue.appendleft(customer)
+        else:
+            self.waiting_queue.append(customer)
+        print(f"Customer {customer.name} added to the waiting line.")
+
+    def seat_customer(self):
+        if self.waiting_queue:
+            customer = self.waiting_queue.popleft()
+            customer.seat()
+            self.undo_stack.append(customer)
+            self.redo_stack.clear()
+        else:
+            print("No customers waiting to be seated.")
+
+    def cancel_customer(self, customer_id):
+        for customer in self.waiting_queue:
+            if customer.customer_id == customer_id:
+                self.waiting_queue.remove(customer)
+                customer.cancel()
+                self.undo_stack.append(customer)
+                self.redo_stack.clear()
+                return
+        print(f"No customer found with ID {customer_id}.")
+
+    def undo_action(self):
+        if self.undo_stack:
+            customer = self.undo_stack.pop()
+            if customer.status == "Seated":
+                customer.status = "Waiting"
+                self.waiting_queue.appendleft(customer)
+                print(f"Seating of {customer.name} undone.")
+            elif customer.status == "Canceled":
+                customer.status = "Waiting"
+                self.waiting_queue.append(customer)
+                print(f"Cancellation of {customer.name} undone.")
+            self.redo_stack.append(customer)
+        else:
+            print("No action to undo.")
+
+    def redo_action(self):
+        if self.redo_stack:
+            customer = self.redo_stack.pop()
+            if customer.status == "Waiting":
+                customer.seat()
+                self.undo_stack.append(customer)
+            elif customer.status == "Waiting":
+                customer.cancel()
+                self.undo_stack.append(customer)
+        else:
+            print("No actions to redo.")
+
+    def view_waiting_list(self):
+        if not self.waiting_queue:
+            print("No customers in the waiting line.")
+        else:
+            print("Waiting customers:")
+            for customer in self.waiting_queue:
+                print(
+                    f"Customer {customer.name} (Party of {customer.party_size}) - {customer.status}"
+                )
+
+
+def main():
+    manager = QueueManager()
+
+    while True:
+        print("\nRestaurant Queue Management")
+        print("1. Add Customer")
+        print("2. Seat Customer")
+        print("3. Cancel Reservation")
+        print("4. Undo Action")
+        print("5. Redo Action")
+        print("6. View Waiting List")
+        print("7. Exit")
+
+        choice = input("Choose an option: ")
+
+        if choice == "1":
+            customer_id = input("Enter customer ID: ")
+            name = input("Enter customer name: ")
+            party_size = int(input("Enter party size: "))
+            vip_status = input("Is the customer a VIP? (yes/no): ").lower() == "yes"
+            customer = Customer(customer_id, name, party_size, vip_status)
+            manager.add_customer(customer)
+        elif choice == "2":
+            manager.seat_customer()
+        elif choice == "3":
+            customer_id = input("Enter customer ID to cancel: ")
+            manager.cancel_customer(customer_id)
+        elif choice == "4":
+            manager.undo_action()
+        elif choice == "5":
+            manager.redo_action()
+        elif choice == "6":
+            manager.view_waiting_list()
+        elif choice == "7":
+            break
+        else:
+            print("Invalid option, please choose again.")
+
+
+if __name__ == "__main__":
+    main()
